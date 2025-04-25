@@ -1,64 +1,75 @@
-name: Build and Package Rust Application
+name: Build, Package, and Release Rust Application
 
 on:
   push:
-    tags:
-      - '*'
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-latest, windows-latest, ubuntu-latest]
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    # Set up Rust
-    - name: Set up Rust
-      uses: actions/setup-rust@v1
-      with:
-        rust-version: 1.65.0  # Update to the version you are using
-
-    # Install dependencies for building
     - name: Install dependencies for building
       run: |
-        sudo apt-get install -y mingw-w64  # For Windows cross-compilation on Linux
+        sudo apt-get update
+        sudo apt-get install -y pkg-config libssl-dev build-essential mingw-w64  # Required dependencies for Windows cross-compilation on Linux
         sudo apt-get install -y pkg-config  # For macOS
 
-    # Build the project
-    - name: Build for Windows and macOS
-      run: |
-        cargo build --release --target x86_64-unknown-linux-gnu
-        cargo build --release --target x86_64-pc-windows-msvc
-        cargo build --release --target x86_64-apple-darwin
+    # Build project for all platforms
+    - name: Build for macOS
+      run: cargo build --release --target x86_64-apple-darwin
 
-    # Package for Windows (NSIS)
+    - name: Build for Windows
+      run: cargo build --release --target x86_64-pc-windows-msvc
+
+    - name: Build for Linux (Ubuntu)
+      run: cargo build --release --target x86_64-unknown-linux-gnu
+
+    # Package for Windows using NSIS
     - name: Package for Windows using NSIS
       if: runner.os == 'Windows'
       run: |
-        # Install NSIS (Windows-only)
-        choco install nsis
-        # Use NSIS to create the installer
-        nsis script.nsi  # Your NSIS script will define how to package
+        choco install nsis  # Install NSIS
+        nsis ./scripts/installer.nsi  # Use an NSIS script to package the application into an installer
 
-    # Package for macOS (pkg)
+    # Package for macOS using pkg
     - name: Package for macOS using pkg
       if: runner.os == 'macos'
       run: |
-        # Install pkg for macOS
-        brew install pkg-config
-        # Package your app using pkg
-        pkg build ./path/to/your/app
+        brew install pkg-config  # Install necessary packages
+        pkgbuild --identifier com.example.yourapp --version 1.0 --install-location /Applications ./pkg/YourApp.pkg ./target/x86_64-apple-darwin/release/your-app
 
-    # Upload the Windows and macOS Installers to GitHub Releases
+    # Upload installers to GitHub Releases
     - name: Upload Installers to GitHub Releases
       uses: softprops/action-gh-release@v1
       with:
         files: |
           ./target/x86_64-pc-windows-msvc/release/your-app-installer.exe
-          ./target/x86_64-apple-darwin/release/your-app-installer.pkg
+          ./pkg/YourApp.pkg
+          ./target/x86_64-unknown-linux-gnu/release/your-app  # Optionally, you can add the Linux build too
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Optionally: Run tests after the build step
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies for testing
+        run: sudo apt-get install -y pkg-config libssl-dev
+
+      - name: Run tests
+        run: cargo test --verbose
