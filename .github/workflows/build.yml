@@ -56,6 +56,14 @@ jobs:
         brew install pkg-config  # Install necessary packages
         pkgbuild --identifier com.example.yourapp --version 1.0 --install-location /Applications ./pkg/YourApp.pkg ./target/x86_64-apple-darwin/release/your-app
 
+    # Package for Linux into a tarball
+    - name: Package for Linux (tarball)
+      if: runner.os == 'Linux'
+      run: |
+        mkdir -p ./pkg/linux
+        cp ./target/x86_64-unknown-linux-gnu/release/your-app ./pkg/linux/
+        tar -czvf ./pkg/your-app-linux.tar.gz -C ./pkg linux/
+
     # Upload installers to GitHub Releases
     - name: Upload Installers to GitHub Releases
       uses: softprops/action-gh-release@v1
@@ -63,7 +71,7 @@ jobs:
         files: |
           ./target/x86_64-pc-windows-msvc/release/your-app-installer.exe
           ./pkg/YourApp.pkg
-          ./target/x86_64-unknown-linux-gnu/release/your-app  # Optionally, you can add the Linux build too
+          ./pkg/your-app-linux.tar.gz  # Linux tarball included here
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
