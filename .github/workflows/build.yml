@@ -1,0 +1,64 @@
+name: Build and Package Rust Application
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # Set up Rust
+    - name: Set up Rust
+      uses: actions/setup-rust@v1
+      with:
+        rust-version: 1.65.0  # Update to the version you are using
+
+    # Install dependencies for building
+    - name: Install dependencies for building
+      run: |
+        sudo apt-get install -y mingw-w64  # For Windows cross-compilation on Linux
+        sudo apt-get install -y pkg-config  # For macOS
+
+    # Build the project
+    - name: Build for Windows and macOS
+      run: |
+        cargo build --release --target x86_64-unknown-linux-gnu
+        cargo build --release --target x86_64-pc-windows-msvc
+        cargo build --release --target x86_64-apple-darwin
+
+    # Package for Windows (NSIS)
+    - name: Package for Windows using NSIS
+      if: runner.os == 'Windows'
+      run: |
+        # Install NSIS (Windows-only)
+        choco install nsis
+        # Use NSIS to create the installer
+        nsis script.nsi  # Your NSIS script will define how to package
+
+    # Package for macOS (pkg)
+    - name: Package for macOS using pkg
+      if: runner.os == 'macos'
+      run: |
+        # Install pkg for macOS
+        brew install pkg-config
+        # Package your app using pkg
+        pkg build ./path/to/your/app
+
+    # Upload the Windows and macOS Installers to GitHub Releases
+    - name: Upload Installers to GitHub Releases
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ./target/x86_64-pc-windows-msvc/release/your-app-installer.exe
+          ./target/x86_64-apple-darwin/release/your-app-installer.pkg
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
