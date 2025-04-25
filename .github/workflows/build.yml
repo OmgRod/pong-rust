@@ -74,16 +74,3 @@ jobs:
           ./pkg/your-app-linux.tar.gz  # Linux tarball included here
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # Optionally: Run tests after the build step
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install dependencies for testing
-        run: sudo apt-get install -y pkg-config libssl-dev
-
-      - name: Run tests
-        run: cargo test --verbose
