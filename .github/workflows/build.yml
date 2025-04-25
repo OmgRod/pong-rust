@@ -26,18 +26,21 @@ jobs:
         sudo apt-get install -y pkg-config libssl-dev build-essential mingw-w64  # Required dependencies for Windows cross-compilation on Linux
         sudo apt-get install -y pkg-config  # For macOS
 
+    # Install macOS target on Ubuntu
     - name: Install macOS target
+      if: runner.os == 'ubuntu'
       run: rustup target add x86_64-apple-darwin
 
-    # Build project for all platforms
-    - name: Build for macOS
-      run: cargo build --release --target x86_64-apple-darwin
-
-    - name: Build for Windows
-      run: cargo build --release --target x86_64-pc-windows-msvc
-
-    - name: Build for Linux (Ubuntu)
-      run: cargo build --release --target x86_64-unknown-linux-gnu
+    # Build project for the appropriate target based on OS
+    - name: Build project
+      run: |
+        if [ $RUNNER_OS == 'Linux' ]; then
+          cargo build --release --target x86_64-unknown-linux-gnu
+        elif [ $RUNNER_OS == 'Windows' ]; then
+          cargo build --release --target x86_64-pc-windows-msvc
+        elif [ $RUNNER_OS == 'macOS' ]; then
+          cargo build --release --target x86_64-apple-darwin
+        fi
 
     # Package for Windows using NSIS
     - name: Package for Windows using NSIS
