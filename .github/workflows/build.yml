@@ -26,6 +26,9 @@ jobs:
         sudo apt-get install -y pkg-config libssl-dev build-essential mingw-w64  # Required dependencies for Windows cross-compilation on Linux
         sudo apt-get install -y pkg-config  # For macOS
 
+    - name: Install macOS target
+      run: rustup target add x86_64-apple-darwin
+
     # Build project for all platforms
     - name: Build for macOS
       run: cargo build --release --target x86_64-apple-darwin
